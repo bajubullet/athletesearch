@@ -101,6 +101,20 @@ func FindBySkill(skill string, c *mgo.Collection) []Athlete {
 	return result
 }
 
+func FindByAge(min, max int, c *mgo.Collection) []Athlete {
+	result := []Athlete{}
+	now := time.Now()
+	dobGreaterThan := now.AddDate(-1*max, 0, 0)
+	dobSmallerThan := now.AddDate(-1*min, 0, 0)
+	c.Find(bson.M{
+		"birthday": bson.M{
+			"$gt": dobGreaterThan,
+			"$lt": dobSmallerThan,
+		},
+	}).All(&result)
+	return result
+}
+
 func main() {
 	session, err := mgo.Dial(DB_HOST)
 	if err != nil {
@@ -109,6 +123,7 @@ func main() {
 	defer session.Close()
 
 	c := session.DB("athletesearch").C("athlete")
-	PrintResults(FindByName("ss", c))
-	PrintResults(FindBySkill("snowboarding", c))
+	// PrintResults(FindByName("ss", c))
+	// PrintResults(FindBySkill("snowboarding", c))
+	PrintResults(FindByAge(20, 40, c))
 }
