@@ -79,13 +79,17 @@ func ReadCSV(file string, session *mgo.Session) {
 }
 
 func PrintResults(results []Athlete) {
+	if len(results) == 0 {
+		fmt.Println("No results")
+		return
+	}
 	for _, athlete := range results {
 		fmt.Println(athlete.Name)
 	}
 }
 
 func FindByName(q string, c *mgo.Collection) []Athlete {
-	// TODO: Add createIndex(text) and use $text instead of $regex
+	// TODO: Add createIndex(text) and use $text instead of $regex also make this case insensitive
 	result := []Athlete{}
 	c.Find(bson.M{
 		"name": bson.M{"$regex": ".*" + q + ".*"},
@@ -124,6 +128,9 @@ func FindByAge(min, max int, c *mgo.Collection) []Athlete {
 }
 
 func main() {
+	if len(os.Args) < 3 {
+		log.Fatal("Please pass an option(name/skill/age/championship/loadCSV) and a value")
+	}
 	session, err := mgo.Dial(DB_HOST)
 	if err != nil {
 		log.Panic(err)
@@ -131,8 +138,23 @@ func main() {
 	defer session.Close()
 
 	c := session.DB("athletesearch").C("athlete")
-	// PrintResults(FindByName("ss", c))
-	// PrintResults(FindBySkill("snowboarding", c))
-	// PrintResults(FindByAge(20, 40, c))
-	PrintResults(FindByChampionship("FIS Freestyle World Championship 2017", c))
+	switch os.Args[1] {
+	case "name":
+		PrintResults(FindByName(strings.Join(os.Args[2:], " "), c))
+	case "skill":
+		PrintResults(FindBySkill(strings.Join(os.Args[2:], " "), c))
+	case "championship":
+		PrintResults(FindByChampionship(strings.Join(os.Args[2:], " "), c))
+	case "loadCSV":
+		ReadCSV(os.Args[2], session)
+	case "age":
+		if len(os.Args) < 4 {
+			log.Fatal("Please pass 2 params")
+		}
+		min, _ := strconv.Atoi(os.Args[2])
+		max, _ := strconv.Atoi(os.Args[3])
+		PrintResults(FindByAge(min, max, c))
+	default:
+		log.Fatal("Invalid params")
+	}
 }
