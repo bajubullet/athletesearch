@@ -101,6 +101,14 @@ func FindBySkill(skill string, c *mgo.Collection) []Athlete {
 	return result
 }
 
+func FindByChampionship(championship string, c *mgo.Collection) []Athlete {
+	result := []Athlete{}
+	c.Find(bson.M{
+		"championships": championship,
+	}).All(&result)
+	return result
+}
+
 func FindByAge(min, max int, c *mgo.Collection) []Athlete {
 	result := []Athlete{}
 	now := time.Now()
@@ -125,5 +133,6 @@ func main() {
 	c := session.DB("athletesearch").C("athlete")
 	// PrintResults(FindByName("ss", c))
 	// PrintResults(FindBySkill("snowboarding", c))
-	PrintResults(FindByAge(20, 40, c))
+	// PrintResults(FindByAge(20, 40, c))
+	PrintResults(FindByChampionship("FIS Freestyle World Championship 2017", c))
 }
