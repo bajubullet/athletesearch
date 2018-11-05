@@ -14,10 +14,11 @@ import (
 )
 
 const (
-	DB_HOST    = "localhost"
-	DB_NAME    = "athletesearch"
-	COLLECTION = "athlete"
-	SHORT_FORM = "January 02, 2006"
+	DB_HOST             = "localhost"
+	DB_NAME             = "athletesearch"
+	COLLECTION          = "athlete"
+	CATEGORY_COLLECTION = "category"
+	SHORT_FORM          = "January 02, 2006"
 )
 
 type Athlete struct {
@@ -27,6 +28,12 @@ type Athlete struct {
 	Exp           int
 	Skills        []string
 	Championships []string
+}
+
+type SportsCategory struct {
+	ID     bson.ObjectId `bson:"_id,omitempty"`
+	Name   string
+	Sports []string
 }
 
 func (a *Athlete) Save(session *mgo.Session) error {
@@ -97,16 +104,29 @@ func FindByName(q string, c *mgo.Collection) []Athlete {
 	return result
 }
 
-func FindBySkill(skill string, c *mgo.Collection) []Athlete {
+func FindBySkill(skill string, session *mgo.Session) []Athlete {
 	result := []Athlete{}
-	c.Find(bson.M{
-		"skills": skill,
-	}).All(&result)
+	category := SportsCategory{}
+	err := session.DB(DB_NAME).C(CATEGORY_COLLECTION).Find(bson.M{
+		"name": skill,
+	}).One(&category)
+	if err != nil {
+		session.DB(DB_NAME).C(COLLECTION).Find(bson.M{
+			"skills": skill,
+		}).All(&result)
+	} else {
+		session.DB(DB_NAME).C(COLLECTION).Find(bson.M{
+			"skills": bson.M{
+				"$in": category.Sports,
+			},
+		}).All(&result)
+	}
 	return result
 }
 
 func FindByChampionship(championship string, c *mgo.Collection) []Athlete {
 	result := []Athlete{}
+	c.Find(bson.M{})
 	c.Find(bson.M{
 		"championships": championship,
 	}).All(&result)
@@ -142,7 +162,7 @@ func main() {
 	case "name":
 		PrintResults(FindByName(strings.Join(os.Args[2:], " "), c))
 	case "skill":
-		PrintResults(FindBySkill(strings.Join(os.Args[2:], " "), c))
+		PrintResults(FindBySkill(strings.Join(os.Args[2:], " "), session))
 	case "championship":
 		PrintResults(FindByChampionship(strings.Join(os.Args[2:], " "), c))
 	case "loadCSV":
